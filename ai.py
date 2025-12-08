@@ -7,7 +7,10 @@ from google.genai.errors import APIError
 import yfinance as yf
 import os 
 import tempfile 
-from config import GEMINI_API_KEY 
+# Hapus baris 'from config import GEMINI_API_KEY' di sini!
+
+# --- MEMBACA KUNCI API DARI STREAMLIT SECRETS ---
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY") # Ini adalah baris yang menggantikan config.py
 
 st.set_page_config(
     page_title="IDX Pro - Analisis Saham AI",
@@ -17,10 +20,10 @@ st.set_page_config(
 
 # --- Inisialisasi Klien Gemini ---
 try:
-    if GEMINI_API_KEY and GEMINI_API_KEY != "GANTI_DENGAN_GEMINI_API_KEY_ANDA":
+    if GEMINI_API_KEY:
         client = genai.Client(api_key=GEMINI_API_KEY)
     else:
-        st.warning("⚠️ Harap atur GEMINI_API_KEY Anda di file config.py untuk mengaktifkan Analisis AI.")
+        st.warning("⚠️ Harap atur GEMINI_API_KEY Anda di file `.streamlit/secrets.toml` untuk mengaktifkan Analisis AI.")
         client = None
 except Exception as e:
     st.error(f"Gagal inisialisasi Gemini Client: {e}")
@@ -39,6 +42,8 @@ if 'uploaded_file_name' not in st.session_state:
     st.session_state['uploaded_file_name'] = None
 if 'financial_text_input_data' not in st.session_state:
     st.session_state['financial_text_input_data'] = None
+
+# --------------------------------------------------------------------------------------------------
 
 # --- FUNGSI DATA YFINANCE ---
 @st.cache_data(ttl=3600)
@@ -140,6 +145,8 @@ def render_candlestick_chart(df):
     }
     st_echarts(options=options, height="600px")
 
+# --------------------------------------------------------------------------------------------------
+
 # --- FUNGSI ANALISIS GEMINI ---
 def analyze_content_with_gemini(input_content, gemini_file_obj=None):
     if not client:
@@ -188,10 +195,12 @@ def analyze_content_with_gemini(input_content, gemini_file_obj=None):
     
     return analysis_result
 
+# --------------------------------------------------------------------------------------------------
+
 # --- FUNGSI CALLBACK (CEPATT!) ---
 def analyze_callback(uploaded_file, financial_text_input):
     if not client:
-        st.session_state['ai_analysis'] = "⚠️ Gemini API belum terinisialisasi. Periksa config.py."
+        st.session_state['ai_analysis'] = "⚠️ Gemini API belum terinisialisasi. Periksa secrets.toml Anda."
         st.session_state['analysis_status'] = 'warning'
         return
         
@@ -211,9 +220,11 @@ def analyze_callback(uploaded_file, financial_text_input):
         st.session_state['ai_analysis'] = "⚠️ Mohon masukkan teks atau upload file terlebih dahulu."
         return
 
-    st.rerun() # Pemicu rerun setelah status diatur
+    st.rerun() 
 
         
+# --------------------------------------------------------------------------------------------------
+
 # --- SIDEBAR & MAIN UI ---
 
 st.sidebar.title("🛠️ Kontrol Analisis")
@@ -355,7 +366,6 @@ with tab2:
             else:
                 st.session_state['ai_analysis'] = analysis_result 
                 st.session_state['analysis_status'] = 'error'
-            # Perubahan session state ini akan memicu RERUN terakhir untuk menampilkan hasil
             st.rerun() 
             
     # --- END: Logika Pemrosesan Berat ---
